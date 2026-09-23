@@ -91,7 +91,7 @@ Status: **Accepted** · **Proposed** · **Superseded**
 
 ## D6. Following the route: pure pursuit + speed profile
 
-**Status:** Accepted
+**Status:** Superseded by D15
 
 **Decision:**
 - The route becomes a line of points in the right-hand lane. At intersections the points follow a smooth curve.
@@ -183,4 +183,25 @@ Status: **Accepted** · **Proposed** · **Superseded**
 **Decision:** World-space labels use Unity's built-in `TextMesh` with a custom shader, `AIDrive/Text3D`. It's the same as Unity's text shader except that it checks depth.
 
 **Context:** Unity's built-in text shader draws on top of everything, so labels showed through buildings. TextMeshPro would also work, but it needs extra resources imported into the project.
+
+---
+
+## D15. Stanley steering instead of pure pursuit
+
+**Status:** Accepted (replaces D6's steering method; the speed profile is unchanged)
+
+**Context:** With pure pursuit, the car cut into the tight right turns (about 4.4 m radius) and then swung up to 1.7 m wide on the way out. That was too far out of lane on a 3 m lane.
+
+**Decision:** Use the **Stanley** controller, the method Stanford's DARPA Grand Challenge car used. It steers using three things:
+- the angle between the car's heading and the path,
+- how far the front axle is from the path, which is corrected harder at low speed,
+- the upcoming curve, read about 0.3 s ahead so the car starts turning in time.
+
+**Result:** the worst lane error dropped from 1.6 m to at most 0.8 m on every test drive, with no collisions.
+
+**Other changes made while tuning:**
+- Turn curves now start 10 m before the intersection centre instead of 8 m, which makes right turns less tight.
+- Pulling over now follows a smooth 14 m S-curve.
+- Pulling out from the curb merges into the lane within 12 m.
+- The car counts as arrived within 1.5 m of the stop point.
 

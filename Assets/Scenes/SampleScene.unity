@@ -56553,6 +56553,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -56678,6 +56679,22 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff6581611aeee460d8d2a8944510a318, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AIDrive::AIDrive.Vehicle.CameraRig
+  mode: 1
+  target: {fileID: 2012803207}
+  chaseOffset: {x: 0, y: 4.5, z: -10}
+  followSharpness: 4
 --- !u!1 &330619829
 GameObject:
   m_ObjectHideFlags: 0
@@ -310799,6 +310816,87 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2012350679}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &2012803205
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -130
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -108.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2678112295714165428, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: m_Name
+      value: Car
+      objectReference: {fileID: 0}
+    - target: {fileID: 3743209955400741591, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: autopilot
+      value: 
+      objectReference: {fileID: 2012803206}
+    - target: {fileID: 3743209955400741591, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+      propertyPath: cameraRig
+      value: 
+      objectReference: {fileID: 330585548}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+--- !u!114 &2012803206 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4643086928503112889, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+  m_PrefabInstance: {fileID: 2012803205}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ae1515b2cb3640068a9cc5efd4b9c1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AIDrive::AIDrive.Vehicle.Autopilot
+--- !u!4 &2012803207 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 204857533694280660, guid: 868898a2181824ea3820a74ed2500939, type: 3}
+  m_PrefabInstance: {fileID: 2012803205}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2013127657
 GameObject:
   m_ObjectHideFlags: 0
@@ -333749,3 +333847,4 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 2096420831}
+  - {fileID: 2012803205}

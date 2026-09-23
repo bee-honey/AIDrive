@@ -12,7 +12,7 @@
 |---|-----------|--------|
 | 0 | City + roads | ✅ Done |
 | 1 | Map semantics (street names, landmarks, road graph, A*) | ✅ Done |
-| 2 | Car + autopilot | ⬜ Not started |
+| 2 | Car + autopilot | ✅ Done |
 | 3 | Raycast sensors | ⬜ Not started |
 | 4 | Props & scenarios | ⬜ Not started |
 | 5 | Traffic lights | ⬜ Not started |
@@ -74,17 +74,25 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done
 
 **Acceptance:** a route between any two landmarks can be computed and drawn in the Scene view. ✅
 
-**Notes for M2:** several landmarks are reached with the destination "on your left" — the pull-over logic should either cross to the far curb or the planner should prefer approaching with the destination on the right.
+**Resolved in M2:** the planner now adds a 400 m penalty for arriving with the destination on the left, so every landmark-to-landmark route arrives on the right.
 
-### M2 — Car + autopilot
-- [ ] Procedural car (body, cabin, 4 wheels that steer/spin)
-- [ ] Rigidbody + kinematic bicycle model (no WheelColliders)
-- [ ] Route → lane-offset waypoints (right-hand traffic), smooth Bézier turns
-- [ ] Pure-pursuit steering, speed profile (slow for turns, stop at destination)
-- [ ] Pull over at destination curb
-- [ ] Chase camera + overview camera
+### ✅ M2 — Car + autopilot
+- [x] Procedural car prefab (`AIDrive → Create Car`): body, cabin, lights, 4 wheels that steer/spin
+- [x] `VehicleController`: Rigidbody + kinematic bicycle model; steer/throttle/brake inputs; collision + distance stats
+- [x] `LanePath`: route → right-lane polyline, Bézier turns, merge-out from the curb, S-curve pull-over into the drop-off zone
+- [x] `Autopilot`: Stanley steering + curvature feed-forward, curvature-aware speed profile, `Idle → Driving → Arrived`
+- [x] Plans from the car's current pose (no U-turn); planner prefers arriving with the destination on the right
+- [x] `Localizer`: "on E2 between S3 & S4, heading east (at Home)"
+- [x] `CameraRig` (chase / overview) + `DriveHud` test panel (state, speed, location, next turn, landmark buttons)
+- [x] 8 new EditMode tests + 3 PlayMode drive tests
 
-**Acceptance:** car drives Home → Park B without collisions.
+**Acceptance:** car drives Home → Park B without collisions. ✅
+
+| Drive | Route | Time | Max lane error | Collisions |
+|---|---|---|---|---|
+| Home → Hospital | E2 → S7 → E6 (494 m) | 54.6 s | 0.63 m | 0 |
+| Home → Park B | E2 → S5 → E3 → S6 (286 m) | 36.7 s | 0.80 m | 0 |
+| School → Gas Station | S2 → E1 → S6 (494 m) | 54.6 s | 0.63 m | 0 |
 
 ### M3 — Raycast sensors
 - [ ] Front fan (7 rays), side (2), rear (1); debug-drawn
