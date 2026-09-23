@@ -76,3 +76,7 @@ Desktop.ini
 
 # MCP server config (contains per-user endpoint)
 .mcp.json
+
+# Secrets (LLM API keys etc.)
+.env
+.env.*

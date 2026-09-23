@@ -147,13 +147,7 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done
 
 ## Technical decisions
 
-| Decision | Choice | Why |
-|----------|--------|-----|
-| Vehicle physics | Rigidbody + bicycle model | Predictable, easy to tune; flat city doesn't need WheelColliders |
-| Pathfinding | Road graph + A* | NavMesh is designed for walking agents, not lane-following cars |
-| Input | IMGUI buttons/text box | Project uses the new Input System only; avoids legacy `Input` |
-| Python ↔ Unity | Local HTTP/JSON server in Unity | Debuggable with `curl`, maps 1:1 to agent tools, same API on a Pi |
-| LLM role | High-level decisions only | Per-frame LLM control is slow, costly and unreliable |
+See [DESIGN.md](DESIGN.md) for the full decision records (D1–D12) with context, alternatives and consequences.
 
 ## Open questions
 
