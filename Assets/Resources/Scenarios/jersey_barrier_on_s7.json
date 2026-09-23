@@ -1,0 +1,11 @@
+{
+  "name": "jersey_barrier_on_s7",
+  "description": "A concrete jersey barrier in the northbound inner lane of S7, just after the left turn from E2.",
+  "start": "Home",
+  "destination": "Hospital",
+  "expect": "Arrived",
+  "min_lane_changes": 1,
+  "props": [
+    { "type": "JerseyBarrier", "street": "S7", "between": ["E3", "E4"], "direction": "northbound", "lane": "inner", "at": 0.5 }
+  ]
+}

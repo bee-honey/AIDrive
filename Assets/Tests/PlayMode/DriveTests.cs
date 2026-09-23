@@ -10,7 +10,7 @@ namespace AIDrive.Tests
     /// <summary>End-to-end: the car drives between landmarks in the real scene.</summary>
     public class DriveTests : DriveTestBase
     {
-        const float TimeoutSimSeconds = 180f;
+        const float TimeoutSimSeconds = 240f;
 
         [UnityTest] public IEnumerator Home_To_ParkB() => Drive("Home", "Park B");
         [UnityTest] public IEnumerator Home_To_Hospital() => Drive("Home", "Hospital");
@@ -31,6 +31,7 @@ namespace AIDrive.Tests
             Assert.Less(Vector3.Distance(new Vector3(pos.x, 0, pos.z), end), 5f, "parked outside the drop-off zone");
             Assert.Less(Autopilot.MaxCrossTrackError, 1.0f, "drifted out of lane");
             Assert.AreEqual(0, Autopilot.LaneChanges, "changed lanes on an empty road (false obstacle?)");
+            Assert.AreEqual(0, Autopilot.RedLightViolations, "ran a red light");
         }
     }
 }

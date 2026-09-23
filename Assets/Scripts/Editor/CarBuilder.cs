@@ -54,45 +54,12 @@ namespace AIDrive.Editor
             EnsureFolder("Assets", "Vehicle");
             EnsureFolder(PrefabDir, "Materials");
 
-            var body = Mat("CarBody", new Color(0.8f, 0.12f, 0.1f), 0.7f);
-            var glass = Mat("CarGlass", new Color(0.1f, 0.14f, 0.2f), 0.9f);
-            var tire = Mat("Tire", new Color(0.06f, 0.06f, 0.06f), 0.1f);
-            var head = Mat("Headlight", new Color(1f, 0.95f, 0.75f), 0.9f, true);
-            var tail = Mat("Taillight", new Color(0.9f, 0.05f, 0.05f), 0.9f, true);
-
             var root = new GameObject("Car");
-            Part(PrimitiveType.Cube, "Body", root.transform, new Vector3(0, 0.65f, 0), new Vector3(1.9f, 0.6f, 4.2f), body);
-            Part(PrimitiveType.Cube, "Cabin", root.transform, new Vector3(0, 1.22f, -0.25f), new Vector3(1.7f, 0.55f, 2.2f), glass);
-            foreach (float x in new[] { -0.6f, 0.6f })
-            {
-                Part(PrimitiveType.Cube, "Headlight", root.transform, new Vector3(x, 0.72f, 2.1f), new Vector3(0.4f, 0.15f, 0.04f), head);
-                Part(PrimitiveType.Cube, "Taillight", root.transform, new Vector3(x, 0.75f, -2.1f), new Vector3(0.4f, 0.12f, 0.04f), tail);
-            }
-
             var vc = root.AddComponent<VehicleController>();
-            var pivots = new Transform[2];
-            var meshes = new Transform[4];
-            int w = 0;
-            foreach (float z in new[] { vc.wheelbase / 2f, -vc.wheelbase / 2f })
-            foreach (float x in new[] { -0.85f, 0.85f })
-            {
-                bool front = z > 0;
-                var pivot = new GameObject(front ? "FrontWheelPivot" : "RearWheelPivot").transform;
-                pivot.SetParent(root.transform, false);
-                pivot.localPosition = new Vector3(x, vc.wheelRadius, z);
-                var mesh = Part(PrimitiveType.Cylinder, "Wheel", pivot, Vector3.zero,
-                    new Vector3(vc.wheelRadius * 2f, 0.125f, vc.wheelRadius * 2f), tire);
-                mesh.transform.localRotation = Quaternion.Euler(0, 0, 90);
-                if (front) pivots[x < 0 ? 0 : 1] = pivot;
-                meshes[w++] = mesh.transform;
-            }
+            BuildBody(root, Mat("CarBody", new Color(0.8f, 0.12f, 0.1f), 0.7f), vc.wheelbase, vc.wheelRadius,
+                      out var pivots, out var meshes);
             vc.frontWheelPivots = pivots;
             vc.wheelMeshes = meshes;
-
-            // Collider sits above the 0.2 m sidewalk so only real obstacles register as collisions.
-            var col = root.AddComponent<BoxCollider>();
-            col.center = new Vector3(0, 0.85f, 0);
-            col.size = new Vector3(1.9f, 1.1f, 4.2f);
 
             var rb = root.GetComponent<Rigidbody>();
             rb.mass = 1200f;
@@ -102,11 +69,56 @@ namespace AIDrive.Editor
 
             root.AddComponent<RaycastSensors>();
             root.AddComponent<Autopilot>();
+            root.AddComponent<AIDrive.Scenario.ScenarioRunner>();
             root.AddComponent<DriveHud>();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        /// <summary>
+        /// Car visuals (body, cabin, lights, 4 wheels) plus a collider that sits above the 0.2 m sidewalk,
+        /// so only real obstacles register as collisions. Shared by the driven car and parked-car props.
+        /// </summary>
+        public static void BuildBody(GameObject root, Material body, float wheelbase, float wheelRadius,
+                                     out Transform[] frontPivots, out Transform[] wheelMeshes)
+        {
+            EnsureFolder("Assets", "Vehicle");
+            EnsureFolder(PrefabDir, "Materials");
+            var glass = Mat("CarGlass", new Color(0.1f, 0.14f, 0.2f), 0.9f);
+            var tire = Mat("Tire", new Color(0.06f, 0.06f, 0.06f), 0.1f);
+            var head = Mat("Headlight", new Color(1f, 0.95f, 0.75f), 0.9f, true);
+            var tail = Mat("Taillight", new Color(0.9f, 0.05f, 0.05f), 0.9f, true);
+
+            Part(PrimitiveType.Cube, "Body", root.transform, new Vector3(0, 0.65f, 0), new Vector3(1.9f, 0.6f, 4.2f), body);
+            Part(PrimitiveType.Cube, "Cabin", root.transform, new Vector3(0, 1.22f, -0.25f), new Vector3(1.7f, 0.55f, 2.2f), glass);
+            foreach (float x in new[] { -0.6f, 0.6f })
+            {
+                Part(PrimitiveType.Cube, "Headlight", root.transform, new Vector3(x, 0.72f, 2.1f), new Vector3(0.4f, 0.15f, 0.04f), head);
+                Part(PrimitiveType.Cube, "Taillight", root.transform, new Vector3(x, 0.75f, -2.1f), new Vector3(0.4f, 0.12f, 0.04f), tail);
+            }
+
+            frontPivots = new Transform[2];
+            wheelMeshes = new Transform[4];
+            int w = 0;
+            foreach (float z in new[] { wheelbase / 2f, -wheelbase / 2f })
+            foreach (float x in new[] { -0.85f, 0.85f })
+            {
+                bool front = z > 0;
+                var pivot = new GameObject(front ? "FrontWheelPivot" : "RearWheelPivot").transform;
+                pivot.SetParent(root.transform, false);
+                pivot.localPosition = new Vector3(x, wheelRadius, z);
+                var mesh = Part(PrimitiveType.Cylinder, "Wheel", pivot, Vector3.zero,
+                    new Vector3(wheelRadius * 2f, 0.125f, wheelRadius * 2f), tire);
+                mesh.transform.localRotation = Quaternion.Euler(0, 0, 90);
+                if (front) frontPivots[x < 0 ? 0 : 1] = pivot;
+                wheelMeshes[w++] = mesh.transform;
+            }
+
+            var col = root.AddComponent<BoxCollider>();
+            col.center = new Vector3(0, 0.85f, 0);
+            col.size = new Vector3(1.9f, 1.1f, 4.2f);
         }
 
         static GameObject Part(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Material mat)
@@ -121,7 +133,7 @@ namespace AIDrive.Editor
             return go;
         }
 
-        static Material Mat(string name, Color c, float smooth, bool emissive = false)
+        public static Material Mat(string name, Color c, float smooth, bool emissive = false)
         {
             string path = MaterialDir + "/" + name + ".mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);

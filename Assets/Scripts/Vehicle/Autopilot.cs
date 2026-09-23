@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AIDrive.Navigation;
+using AIDrive.Traffic;
 using UnityEngine;
 
 namespace AIDrive.Vehicle
@@ -14,7 +15,7 @@ namespace AIDrive.Vehicle
     [RequireComponent(typeof(VehicleController))]
     public class Autopilot : MonoBehaviour
     {
-        public enum State { Idle, Driving, Waiting, Blocked, Arrived, Failed }
+        public enum State { Idle, Driving, StoppedAtLight, Waiting, Blocked, Arrived, Failed }
 
         [Header("Speed")]
         public float cruiseSpeed = 11f;
@@ -48,6 +49,14 @@ namespace AIDrive.Vehicle
         [Tooltip("Seconds stopped behind an obstacle before declaring Blocked")]
         public float blockedAfter = 2f;
 
+        [Header("Traffic signals")]
+        [Tooltip("Stop for a yellow only if it needs no more than this deceleration (m/s²); otherwise go through")]
+        public float yellowStopDecel = 4f;
+        [Tooltip("Start reacting to a signal this far before its stop line")]
+        public float signalLookahead = 60f;
+
+        const float FrontOffset = 2.1f;
+
         public State CurrentState { get; private set; } = State.Idle;
         public string Destination { get; private set; }
         public Route Route { get; private set; }
@@ -66,6 +75,11 @@ namespace AIDrive.Vehicle
         public float PathObstacleDistance { get; private set; } = float.PositiveInfinity;
         public string PathObstacleName { get; private set; }
         public BlockInfo Blocked { get; private set; }
+        public int RedLightStops { get; private set; }
+        public int RedLightViolations { get; private set; }
+        public float TimeAtLights { get; private set; }
+        /// <summary>e.g. "Red at S3 & E2 in 35 m"; null when no signal ahead.</summary>
+        public string NextSignal { get; private set; }
 
         public event Action<Autopilot> Arrived;
         public event Action<Autopilot, BlockInfo> BlockedDetected;
@@ -88,6 +102,9 @@ namespace AIDrive.Vehicle
         float targetShift;
         float passUntil;
         float stoppedFor;
+        int nextStop;
+        bool goingThroughYellow;
+        float lightStop = float.PositiveInfinity;
         readonly List<PathHit> hits = new List<PathHit>();
 
         void Awake()
@@ -129,6 +146,11 @@ namespace AIDrive.Vehicle
             LaneShift = targetShift = 0f;
             LaneChanges = 0;
             stoppedFor = 0f;
+            nextStop = 0;
+            goingThroughYellow = false;
+            RedLightStops = RedLightViolations = 0;
+            TimeAtLights = 0f;
+            NextSignal = null;
             Blocked = null;
             LastError = null;
             car.Reverse = false;
@@ -157,7 +179,8 @@ namespace AIDrive.Vehicle
         }
 
         /// <summary>Following a route: driving, or stopped for an obstacle.</summary>
-        public bool IsActive => CurrentState == State.Driving || CurrentState == State.Waiting || CurrentState == State.Blocked;
+        public bool IsActive => CurrentState == State.Driving || CurrentState == State.StoppedAtLight ||
+                                CurrentState == State.Waiting || CurrentState == State.Blocked;
 
         void FixedUpdate()
         {
@@ -192,6 +215,9 @@ namespace AIDrive.Vehicle
                 return;
             }
 
+            // --- Traffic signals: must we stop at the next stop line?
+            lightStop = CheckSignals(s + FrontOffset, v);
+
             // --- Perception: which sensor hits lie in which lane ahead of us?
             Perceive(s);
             UpdateLaneChoice(s, v, dt);
@@ -217,16 +243,18 @@ namespace AIDrive.Vehicle
             targetSpeed = Mathf.Min(targetSpeed, Mathf.Sqrt(2f * comfortDecel * Mathf.Max(0f, DistanceRemaining - 0.3f)));
             if (!float.IsInfinity(obstacle))
                 targetSpeed = Mathf.Min(targetSpeed, Mathf.Sqrt(2f * hardDecel * Mathf.Max(0f, obstacle - stopGap)));
+            if (!float.IsInfinity(lightStop))
+                targetSpeed = Mathf.Min(targetSpeed, Mathf.Sqrt(2f * comfortDecel * Mathf.Max(0f, lightStop - 0.3f)));
             if (Mathf.Abs(LaneShift - targetShift) > 0.05f)
                 targetSpeed = Mathf.Min(targetSpeed, laneChangeSpeed);
 
             float err = targetSpeed - v;
             float throttle = err > 0f ? Mathf.Clamp01(err * 0.6f) : 0f;
             float brake = err < -0.2f ? Mathf.Clamp01(-err * 0.5f) : 0f;
-            if (!float.IsInfinity(obstacle))
+            // Brake by the deceleration actually needed to reach the nearest stop point, instead of waiting for speed error.
+            float room = Mathf.Min(obstacle - stopGap, lightStop - 0.3f);
+            if (!float.IsInfinity(room))
             {
-                // Brake by the deceleration actually needed to stop stopGap short, instead of waiting for speed error.
-                float room = obstacle - stopGap;
                 float needed = room > 0.1f ? v * v / (2f * room) : float.PositiveInfinity;
                 if (needed > 1f)
                 {
@@ -234,7 +262,7 @@ namespace AIDrive.Vehicle
                     brake = Mathf.Max(brake, Mathf.Clamp01(needed / car.maxBrake));
                 }
             }
-            if (DistanceRemaining < 0.4f || obstacle < stopGap * 0.7f) { throttle = 0f; brake = 1f; }
+            if (DistanceRemaining < 0.4f || obstacle < stopGap * 0.7f || lightStop < 0.2f) { throttle = 0f; brake = 1f; }
             car.SetControls(steer, throttle, brake);
 
             UpdateStoppedState(obstacle, v, dt);
@@ -251,7 +279,7 @@ namespace AIDrive.Vehicle
                 if (!Path.Project(r.Point, progress, 80, out float hs, out float hl)) continue;
                 float ahead = hs - s - halfLength;
                 if (ahead < -1f) continue;
-                hits.Add(new PathHit { Ahead = ahead, Lateral = hl, Point = r.Point, Name = r.Collider.name });
+                hits.Add(new PathHit { Ahead = ahead, Lateral = hl, Point = r.Point, Name = Scenario.Obstacle.Describe(r.Collider) });
             }
         }
 
@@ -324,13 +352,23 @@ namespace AIDrive.Vehicle
 
         void UpdateStoppedState(float obstacle, float v, float dt)
         {
+            bool atLight = !float.IsInfinity(lightStop) && lightStop < 3f && Mathf.Abs(v) < 0.3f;
+            if (!float.IsInfinity(lightStop) && Mathf.Abs(v) < 0.5f) TimeAtLights += dt;
+
             bool heldUp = obstacle < stopGap + 2f && Mathf.Abs(v) < 0.3f;
             if (!heldUp)
             {
                 stoppedFor = 0f;
+                if (atLight)
+                {
+                    if (CurrentState != State.StoppedAtLight) RedLightStops++;
+                    CurrentState = State.StoppedAtLight;
+                    return;
+                }
                 if (CurrentState != State.Driving)
                 {
-                    Debug.Log($"Autopilot: path clear, resuming to {Destination}");
+                    if (CurrentState == State.Waiting || CurrentState == State.Blocked)
+                        Debug.Log($"Autopilot: path clear, resuming to {Destination}");
                     CurrentState = State.Driving;
                     Blocked = null;
                 }
@@ -360,6 +398,56 @@ namespace AIDrive.Vehicle
             CurrentState = State.Blocked;
             Debug.Log($"Autopilot: BLOCKED on {Blocked.street} between {Blocked.between} by {Blocked.by} ({Blocked.distance_m} m ahead)");
             BlockedDetected?.Invoke(this, Blocked);
+        }
+
+        /// <summary>
+        /// Distance from the front bumper to the stop line the car must stop at, or +∞ if it may proceed.
+        /// Stops on red; stops on yellow only when that is comfortably possible (otherwise commits to going through).
+        /// Counts a violation whenever the front bumper crosses a stop line on red.
+        /// </summary>
+        float CheckSignals(float front, float v)
+        {
+            var stops = Path.StopPoints;
+            while (nextStop < stops.Count && stops[nextStop].Distance < front)
+            {
+                var passed = stops[nextStop];
+                var passedSignal = SignalAt(passed.NodeId);
+                if (passedSignal != null && passedSignal.StateFor(SignalTiming.AxisOf(passed.Direction)) == SignalState.Red)
+                {
+                    RedLightViolations++;
+                    Debug.LogWarning($"Autopilot: RED LIGHT VIOLATION at {passedSignal.Name}");
+                }
+                nextStop++;
+                goingThroughYellow = false;
+            }
+
+            NextSignal = null;
+            for (int i = nextStop; i < stops.Count; i++)
+            {
+                float remain = stops[i].Distance - front;
+                if (remain > signalLookahead) break;
+                var signal = SignalAt(stops[i].NodeId);
+                if (signal == null) continue; // unsignalised intersection
+
+                var state = signal.StateFor(SignalTiming.AxisOf(stops[i].Direction));
+                NextSignal = $"{state} at {signal.Name} in {Mathf.Max(0f, remain):0} m";
+
+                // Only the first signalised stop line ahead matters right now.
+                if (state == SignalState.Green) { goingThroughYellow = false; return float.PositiveInfinity; }
+                if (state == SignalState.Yellow)
+                {
+                    bool canStop = remain > 0.5f && v * v / (2f * remain) <= yellowStopDecel;
+                    if (goingThroughYellow || !canStop) { goingThroughYellow = true; return float.PositiveInfinity; }
+                }
+                return remain;
+            }
+            return float.PositiveInfinity;
+        }
+
+        TrafficSignal SignalAt(int nodeId)
+        {
+            var node = CityMap.Instance.Graph.Nodes[nodeId];
+            return node.Kind == NodeKind.Intersection ? TrafficSignal.At(node.GridX, node.GridZ) : null;
         }
 
         void SetArrived()

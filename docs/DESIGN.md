@@ -18,7 +18,7 @@ Status: **Accepted** · **Proposed** · **Superseded**
 - *The LLM steers every frame.* This is too slow (hundreds of milliseconds per decision), too expensive, not repeatable from run to run, and unsafe.
 - *No LLM, just a scripted state machine.* This works as a driver but isn't an agent: it can't take natural-language goals or handle new situations.
 
-**Consequences:** The agent only runs when something happens, such as a new goal, a blocked road, arriving, or getting stuck. The driver works on its own, so the simulator can be demoed and tested without the LLM.
+**Consequences:** The agent only runs when something happens, such as a new goal, a blocked road, arriving, or getting stuck. The driver works on its own, so the simulator can be demoed and tested without the LLM. D18 spells out exactly which decisions belong to the agent.
 
 ---
 
@@ -120,7 +120,7 @@ Status: **Accepted** · **Proposed** · **Superseded**
 
 **Consequences:**
 - The agent has something real to react to, which gives the evaluations meaningful rerouting scenarios.
-- The C# code also reroutes on its own as a fallback, so the demo keeps working when the agent isn't running. With the agent connected, the agent decides.
+- Unity marks the road closed and reports it, but **doesn't pick a new route by itself** (see D18). A simple baseline rule ("turn around and reroute with A*") runs only when no agent is connected. It keeps the demo working without the agent and gives M10 something to compare the agent against.
 
 ---
 
@@ -220,4 +220,61 @@ Status: **Accepted** · **Proposed** · **Superseded**
 **Blocked:** Stopped behind an obstacle for 2 s, with no free lane → `Blocked`. The car **waits**. It doesn't turn around or pick a new route by itself here: that decision belongs to the planner (M6) and later the agent, as D1 intends. It continues if the obstacle goes away.
 
 **The ray list is defined in code**, not saved in the prefab. That way, tuning the default rays always reaches the car in the scene.
+
+---
+
+## D17. Scenarios are data, placed by street address
+
+**Status:** Accepted
+
+**Decision:** A test situation is a JSON file in `Assets/Resources/Scenarios/`. It gives a start landmark, a destination, the props to place, and the expected outcome. Props are placed by **street address** (`street`, `between`, `direction`, `lane`, `at`), not by coordinates. `ScenarioRunner` runs one file and returns a `ScenarioResult` JSON with the outcome, pass/fail, time, distance, collisions, lane changes, worst lane error, and what blocked the car (if anything).
+
+**Why:**
+- A scenario reads like a traffic report ("E2 eastbound closed between S3 and S4"), using the same words the agent will use.
+- An address that's wrong fails validation with a readable message instead of silently putting a prop in the wrong place.
+- The M10 evaluation system can generate hundreds of scenarios as data and run them with the same runner. The results are already JSON.
+
+**Scenario-only clutter:** Parked cars (and every other obstacle) appear only when a scenario places them. The default city has just the permanent street lamps, so a run is fully determined by its scenario file.
+
+**Consequences:** Scenario files must live under `Resources/` so they can be loaded at runtime. If the city layout changes, addresses that no longer exist fail validation, and an EditMode test checks every scenario file.
+
+---
+
+## D18. What the agent is for: judgment, not reflexes
+
+**Status:** Accepted
+
+**Context:** Once Unity handles braking, lane keeping, obstacle avoidance, traffic lights and shortest routes, an agent that only "suggests turns" adds nothing. A* picks turns better than any LLM.
+
+**Decision:** Split the work by the kind of decision:
+
+| Unity (the driver) | Agent (the navigator/passenger) |
+|---|---|
+| Reflexes that must happen within milliseconds: braking, lane keeping, avoiding obstacles, **traffic lights** | Turning vague intent into goals: "somewhere to eat, then the hospital" |
+| Problems with one correct answer: the shortest route between two points | Preferences: "avoid downtown" becomes streets to avoid |
+| Sensing and **reporting** events such as `blocked` and `arrived` | **Deciding** on events: wait, detour, or change destination; asking the passenger |
+| | Unstructured information: text traffic reports |
+| | Goals that change mid-trip; explaining decisions |
+
+**Why:** An LLM takes 1–3 s per decision and occasionally gets things wrong, so it must never handle anything safety-critical. Its advantage is understanding language and weighing tradeoffs, which rules can't do.
+
+**Consequences:**
+- M6 provides replanning *tools* and a baseline rule, but doesn't make the decision itself.
+- The capstone gets a measurable question for M10: **agent vs. baseline on scenarios that need judgment.** "The baseline wins on simple trips, and the agent wins when judgment is needed" is a valid and interesting result.
+
+---
+
+## D19. Traffic lights are fixed-time and fully handled by Unity
+
+**Status:** Accepted
+
+**Decision:**
+- Every inner intersection runs the same fixed-time, two-phase plan: north–south green, then east–west green, with yellow and all-red between them.
+- Each intersection is offset by a fixed amount so they aren't all in sync.
+- Signals use scene time, so every scene load (test, scenario, evaluation run) sees exactly the same timing.
+- Only the **9 intersections where main roads cross** (S2/S4/S6 × E2/E4/E6) have signals (`CityLayout.IsSignalized`). Every other intersection is unsignalised. An earlier version put signals at all 25 inner intersections: every block had a light, trips took twice as long, and it looked unrealistic.
+
+**Driving rules:** Stop on red. On yellow, stop only if 4 m/s² of braking or less is enough; otherwise go through, and don't reconsider. Crossing the stop line on red counts as a violation and fails a scenario.
+
+**Why not adaptive or agent-controlled signals:** Signals are a reflex (D18): decisions measured in milliseconds, with a correct answer given by the rules. The agent only sees their effect, for example "4 stops, 57 s waiting at lights", which becomes a factor when choosing between routes.
 

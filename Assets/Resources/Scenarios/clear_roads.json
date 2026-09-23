@@ -1,0 +1,8 @@
+{
+  "name": "clear_roads",
+  "description": "Baseline: empty roads. Home → Hospital via E2, S7, E6.",
+  "start": "Home",
+  "destination": "Hospital",
+  "expect": "Arrived",
+  "props": []
+}

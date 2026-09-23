@@ -64,7 +64,8 @@ namespace AIDrive.Tests
             Debug.Log($"{label}: {Autopilot.CurrentState} in {Autopilot.TripTime:0.0}s, " +
                       $"{Autopilot.Vehicle.DistanceTravelled:0} m driven, route {Autopilot.Route?.Length:0} m, " +
                       $"max lane error {Autopilot.MaxCrossTrackError:0.00} m at {Autopilot.MaxCrossTrackAt:0}/{Autopilot.Path?.Length:0} m, " +
-                      $"lane changes {Autopilot.LaneChanges}, collisions {Autopilot.Vehicle.Collisions}");
+                      $"lane changes {Autopilot.LaneChanges}, collisions {Autopilot.Vehicle.Collisions}, " +
+                      $"red-light stops {Autopilot.RedLightStops} ({Autopilot.TimeAtLights:0} s), violations {Autopilot.RedLightViolations}");
         }
     }
 }

@@ -59,6 +59,12 @@ namespace AIDrive.City
         public static string EastWestRoad(int j) => "E" + (j + 1);
         public static string IntersectionName(int i, int j) => NorthSouthRoad(i) + " & " + EastWestRoad(j);
 
+        /// <summary>
+        /// Traffic signals only where main roads cross: S2/S4/S6 × E2/E4/E6 (9 intersections).
+        /// Every other intersection is unsignalised.
+        /// </summary>
+        public static bool IsSignalized(int i, int j) => i % 2 == 1 && j % 2 == 1 && i < RoadCount - 1 && j < RoadCount - 1;
+
         public static readonly LandmarkDef[] DefaultLandmarks =
         {
             new LandmarkDef("Home",        0, 0, RoadSide.North, new Color(0.20f, 0.50f, 0.95f)),

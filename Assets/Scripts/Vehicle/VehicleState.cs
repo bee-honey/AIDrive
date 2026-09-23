@@ -47,6 +47,10 @@ namespace AIDrive.Vehicle
         public double right_clearance_m;
         public double rear_clearance_m;
         public double lane_shift_m;
+        public string next_signal;
+        public int red_light_stops;
+        public int red_light_violations;
+        public double time_at_lights_s;
         public bool is_blocked;
         public BlockInfo blocked;
         public int collisions;
@@ -78,6 +82,10 @@ namespace AIDrive.Vehicle
                 right_clearance_m = Clearance("right"),
                 rear_clearance_m = Clearance("rear"),
                 lane_shift_m = Round(ap.LaneShift),
+                next_signal = ap.NextSignal ?? "",
+                red_light_stops = ap.RedLightStops,
+                red_light_violations = ap.RedLightViolations,
+                time_at_lights_s = Round(ap.TimeAtLights),
                 is_blocked = ap.CurrentState == Autopilot.State.Blocked,
                 blocked = ap.CurrentState == Autopilot.State.Blocked ? ap.Blocked : new BlockInfo(),
                 collisions = car.Collisions,
@@ -89,7 +97,7 @@ namespace AIDrive.Vehicle
                         angle = r.Angle,
                         range = r.Range,
                         distance = Round(r.Distance),
-                        hit = r.Hit ? r.Collider.name : "",
+                        hit = r.Hit ? Scenario.Obstacle.Describe(r.Collider) : "",
                     }).ToArray(),
             };
         }

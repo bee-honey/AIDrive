@@ -29,11 +29,11 @@ namespace AIDrive.Tests
         }
 
         [UnityTest]
-        public IEnumerator Blocker_CarStopsAndReportsBlocked()
+        public IEnumerator RoadClosed_CarStopsAndReportsBlocked()
         {
             yield return ParkAt("Home");
             Assert.IsTrue(Autopilot.DriveTo("Hospital"));
-            var blocker = TestObstacles.PlaceOnPath(Autopilot.Path, ObstacleAt, ObstacleKind.Blocker);
+            var blocker = TestObstacles.PlaceOnPath(Autopilot.Path, ObstacleAt, ObstacleKind.RoadClosed);
 
             yield return WaitFor(Autopilot.State.Blocked, 60f);
             Assert.AreEqual(Autopilot.State.Blocked, Autopilot.CurrentState);
@@ -44,7 +44,7 @@ namespace AIDrive.Tests
             Debug.Log($"Blocked: {JsonUtility.ToJson(info)}");
             Assert.AreEqual("E2", info.street);
             Assert.AreEqual("S3 & S4", info.between);
-            Assert.AreEqual("TestBlocker", info.by);
+            Assert.AreEqual("RoadClosed", info.by);
             Assert.That(info.distance_m, Is.InRange(2.3f, 4f), "stopping gap (target 3 m)");
 
             // Stays put rather than creeping forward.
@@ -60,11 +60,11 @@ namespace AIDrive.Tests
         }
 
         [UnityTest]
-        public IEnumerator BlockerRemoved_CarResumesAndArrives()
+        public IEnumerator RoadClosedRemoved_CarResumesAndArrives()
         {
             yield return ParkAt("Home");
             Assert.IsTrue(Autopilot.DriveTo("Hospital"));
-            var blocker = TestObstacles.PlaceOnPath(Autopilot.Path, ObstacleAt, ObstacleKind.Blocker);
+            var blocker = TestObstacles.PlaceOnPath(Autopilot.Path, ObstacleAt, ObstacleKind.RoadClosed);
 
             yield return WaitFor(Autopilot.State.Blocked, 60f);
             Assert.AreEqual(Autopilot.State.Blocked, Autopilot.CurrentState);

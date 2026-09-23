@@ -1,0 +1,10 @@
+{
+  "name": "road_closed",
+  "description": "E2 eastbound closed between S3 and S4. The car must stop and report Blocked (M6 will reroute).",
+  "start": "Home",
+  "destination": "Hospital",
+  "expect": "Blocked",
+  "props": [
+    { "type": "RoadClosed", "street": "E2", "between": ["S3", "S4"], "direction": "eastbound", "lane": "both", "at": 0.5 }
+  ]
+}

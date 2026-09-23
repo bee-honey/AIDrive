@@ -1,5 +1,6 @@
 using AIDrive.City;
 using AIDrive.Navigation;
+using AIDrive.Traffic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -180,6 +181,124 @@ namespace AIDrive.Editor
             BuildStreetSigns(Group("StreetSigns", map));
             BuildRoadLabels(Group("RoadLabels", map));
             BuildLandmarks(Group("Landmarks", map), blockTop);
+            BuildStreetLamps(Group("StreetLamps", map));
+            BuildTrafficSignals(Group("TrafficSignals", map));
+        }
+
+        /// <summary>
+        /// Signals where main roads cross (see <see cref="CityLayout.IsSignalized"/>). Each approach gets a
+        /// far-side head on the far-right corner, facing the drivers, plus a white stop line before the crosswalk.
+        /// </summary>
+        static void BuildTrafficSignals(Transform parent)
+        {
+            var housing = Mat("SignalHousing", new Color(0.12f, 0.13f, 0.14f), 0.4f);
+            var pole = Mat("SignPole", new Color(0.45f, 0.45f, 0.47f), 0.4f);
+            var stopLine = Mat("LaneWhite", new Color(0.95f, 0.95f, 0.9f), 0.3f);
+            Material Lamp(string name, Color c, bool on)
+            {
+                var m = Mat(name, on ? c : c * 0.18f, 0.8f);
+                if (on)
+                {
+                    m.EnableKeyword("_EMISSION");
+                    m.SetColor("_EmissionColor", c * 3f);
+                }
+                else
+                {
+                    m.DisableKeyword("_EMISSION");
+                    m.SetColor("_EmissionColor", Color.black);
+                }
+                return m;
+            }
+            Color red = new Color(1f, 0.1f, 0.05f), yellow = new Color(1f, 0.75f, 0.05f), green = new Color(0.1f, 1f, 0.35f);
+
+            float rw = CityLayout.RoadWidth;
+            var approaches = new[] { Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
+            for (int i = 0; i < CityLayout.RoadCount; i++)
+            for (int j = 0; j < CityLayout.RoadCount; j++)
+            {
+                if (!CityLayout.IsSignalized(i, j)) continue;
+                var centre = CityLayout.Intersection(i, j);
+                var root = new GameObject("Signal_" + CityLayout.NorthSouthRoad(i) + "_" + CityLayout.EastWestRoad(j));
+                root.transform.SetParent(parent, false);
+                root.transform.localPosition = centre;
+                var signal = root.AddComponent<TrafficSignal>();
+                signal.gridX = i;
+                signal.gridZ = j;
+                signal.offset = SignalTiming.OffsetFor(i, j);
+                signal.redOn = Lamp("SignalRedOn", red, true);
+                signal.redOff = Lamp("SignalRedOff", red, false);
+                signal.yellowOn = Lamp("SignalYellowOn", yellow, true);
+                signal.yellowOff = Lamp("SignalYellowOff", yellow, false);
+                signal.greenOn = Lamp("SignalGreenOn", green, true);
+                signal.greenOff = Lamp("SignalGreenOff", green, false);
+
+                var heads = new System.Collections.Generic.List<SignalHead>();
+                foreach (var d in approaches)
+                {
+                    var right = LanePath.RightOf(d);
+                    // Far-right corner as seen by traffic travelling in d, diagonal from the street-sign pole.
+                    var cornerPos = (d + right) * (rw / 2f + 1.6f) + Vector3.up * CityLayout.SidewalkHeight;
+                    var post = Group("Pole", root.transform);
+                    post.localPosition = cornerPos;
+                    Primitive(PrimitiveType.Cylinder, "Post", post, new Vector3(0, 1.9f, 0), new Vector3(0.14f, 1.9f, 0.14f), pole, true);
+
+                    var head = Group("Head", post);
+                    head.localPosition = new Vector3(0, 3.35f, 0);
+                    head.localRotation = Quaternion.LookRotation(-d); // lamps face the approaching drivers
+                    Box("Housing", head, Vector3.zero, new Vector3(0.36f, 1.0f, 0.28f), housing, false);
+                    Renderer L(string name, float y)
+                    {
+                        var lamp = Primitive(PrimitiveType.Sphere, name, head, new Vector3(0, y, 0.12f), Vector3.one * 0.22f, housing, false);
+                        lamp.isStatic = false; // material is swapped at runtime; keep it out of static batches
+                        return lamp.GetComponent<Renderer>();
+                    }
+                    heads.Add(new SignalHead
+                    {
+                        axis = SignalTiming.AxisOf(d),
+                        red = L("Red", 0.3f),
+                        yellow = L("Yellow", 0f),
+                        green = L("Green", -0.3f),
+                    });
+
+                    // Stop line across the approach's two lanes, just before the crosswalk.
+                    var line = Box("StopLine", root.transform, -d * (LaneSettings.Default.StopLine - 0.25f) + right * 3.1f + Vector3.up * 0.016f,
+                                   new Vector3(5.8f, 0.01f, 0.4f), stopLine, false);
+                    line.transform.localRotation = Quaternion.LookRotation(d);
+                }
+                signal.heads = heads.ToArray();
+            }
+        }
+
+        /// <summary>
+        /// One lamp per sidewalk side per block, at 30 % / 70 % along the block so they never clash with
+        /// corner street signs or the mid-block landmark signs. Sides facing outside the city are skipped.
+        /// </summary>
+        static void BuildStreetLamps(Transform parent)
+        {
+            var prefab = PropBuilder.EnsureBuilt().streetLamp;
+            float rw = CityLayout.RoadWidth, sidewalk = rw / 2f + 0.7f;
+            int n = CityLayout.RoadCount;
+
+            void Place(Vector3 roadPoint, Vector3 toSidewalk)
+            {
+                var lamp = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+                lamp.transform.position = roadPoint + toSidewalk * sidewalk + Vector3.up * CityLayout.SidewalkHeight;
+                lamp.transform.rotation = Quaternion.LookRotation(-toSidewalk); // arm reaches over the road
+            }
+
+            for (int road = 0; road < n; road++)
+            for (int seg = 0; seg < n - 1; seg++)
+            {
+                float a = CityLayout.RoadCenter(seg) + rw / 2f + 1f;
+                float len = CityLayout.BlockSize - 2f;
+                float c = CityLayout.RoadCenter(road);
+                // E road: sidewalks to the north (+z) and south (-z)
+                if (road < n - 1) Place(new Vector3(a + 0.3f * len, 0, c), Vector3.forward);
+                if (road > 0)     Place(new Vector3(a + 0.7f * len, 0, c), Vector3.back);
+                // S road: sidewalks to the east (+x) and west (-x)
+                if (road < n - 1) Place(new Vector3(c, 0, a + 0.7f * len), Vector3.right);
+                if (road > 0)     Place(new Vector3(c, 0, a + 0.3f * len), Vector3.left);
+            }
         }
 
         /// <summary>One pole per intersection on the corner facing the city centre, with a plate per street.</summary>

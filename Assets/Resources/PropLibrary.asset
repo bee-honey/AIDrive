@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9be7c391644de4d24a5f257e885eb9eb, type: 3}
+  m_Name: PropLibrary
+  m_EditorClassIdentifier: AIDrive::AIDrive.Scenario.PropLibrary
+  cone: {fileID: 874115704928902772, guid: 722e6543e219b42b78ffd724217bba3c, type: 3}
+  barrier: {fileID: 5099959060001146805, guid: 22a5a2814580f472894bb01f37bf82d0, type: 3}
+  roadClosed: {fileID: 8154304315140751323, guid: c469efd282edc4de18daeee1c3d46522, type: 3}
+  jerseyBarrier: {fileID: 8777116099702513033, guid: 5f435fe23f98b49d29dc128d9a16859d, type: 3}
+  parkedCars:
+  - {fileID: 5950190080762076864, guid: 57c54ca87ec8947058bedb313385afc2, type: 3}
+  - {fileID: 4096678398740014116, guid: 5ae7f339678854336bd67f46388975e9, type: 3}
+  - {fileID: 7177058427395473628, guid: 00a48ff3f569d464aa1fa25c9ba5642f, type: 3}
+  - {fileID: 2949551530741012484, guid: fbf93f7bbb867462c9f7e25b359da770, type: 3}
+  streetLamp: {fileID: 5317584591062635186, guid: 7e359e0d3298d4a26be14e37881e5860, type: 3}

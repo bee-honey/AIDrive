@@ -11,6 +11,16 @@ namespace AIDrive.Navigation
         public string Text;
     }
 
+    /// <summary>Where the front bumper must stop before an intersection the route enters.</summary>
+    public class StopPoint
+    {
+        /// <summary>Distance along the path at which the front bumper reaches the stop line.</summary>
+        public float Distance;
+        public int NodeId;
+        /// <summary>Travel direction when approaching the intersection.</summary>
+        public Vector3 Direction;
+    }
+
     public struct LaneSettings
     {
         /// <summary>Right-lane centre, measured from the road centre line.</summary>
@@ -20,8 +30,13 @@ namespace AIDrive.Navigation
         /// <summary>How far before/after an intersection centre a turn curve starts/ends.</summary>
         public float TurnEntry;
         public float Spacing;
+        /// <summary>Stop line distance before an intersection centre (just outside the crosswalk).</summary>
+        public float StopLine;
 
-        public static LaneSettings Default => new LaneSettings { LaneOffset = 1.8f, CurbOffset = 4.3f, TurnEntry = 10f, Spacing = 1f };
+        public static LaneSettings Default => new LaneSettings
+        {
+            LaneOffset = 1.8f, CurbOffset = 4.3f, TurnEntry = 10f, Spacing = 1f, StopLine = 8f,
+        };
     }
 
     /// <summary>
@@ -35,6 +50,7 @@ namespace AIDrive.Navigation
         public readonly List<Vector3> Points = new List<Vector3>();
         public readonly List<float> Distances = new List<float>();
         public readonly List<Maneuver> Maneuvers = new List<Maneuver>();
+        public readonly List<StopPoint> StopPoints = new List<StopPoint>();
 
         public float Length => Distances.Count > 0 ? Distances[Distances.Count - 1] : 0f;
 
@@ -57,6 +73,7 @@ namespace AIDrive.Navigation
         {
             var raw = new List<Vector3> { Flat(startPos) };
             var rawManeuvers = new List<(int index, string text)>();
+            var stops = new List<(Vector3 pos, int node, Vector3 dir)>();
             var dIn = Flat(startDir).normalized;
 
             // Pulling out from the curb (or otherwise off-lane): merge into the driving lane within MergeDistance.
@@ -85,6 +102,9 @@ namespace AIDrive.Navigation
                     raw.Add(n + dIn * 2f + rIn * s.CurbOffset);
                     break;
                 }
+
+                if (node.Kind == NodeKind.Intersection)
+                    stops.Add((n - dIn * s.StopLine + rIn * s.LaneOffset, node.Id, dIn));
 
                 var dOut = (graph.Nodes[route.NodeIds[k + 1]].Position - n).normalized;
                 float cross = Vector3.Cross(dIn, dOut).y;
@@ -129,6 +149,15 @@ namespace AIDrive.Navigation
 
             var goal = graph.Nodes[route.NodeIds[route.NodeIds.Count - 1]];
             path.Maneuvers.Add(new Maneuver { Distance = path.Length, Text = $"Arrive at {goal.Name}" });
+
+            // Stop lines, located in order along the path (a route may pass the same area twice).
+            int from = 0;
+            foreach (var (pos, nodeId, dir) in stops)
+            {
+                if (!path.Project(pos, from, 200, out float d, out _) || d < 0f) continue;
+                path.StopPoints.Add(new StopPoint { Distance = d, NodeId = nodeId, Direction = dir });
+                from = path.ClosestIndex(pos, from, 200);
+            }
             return path;
         }
 

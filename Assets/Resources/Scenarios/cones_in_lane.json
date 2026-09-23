@@ -1,0 +1,12 @@
+{
+  "name": "cones_in_lane",
+  "description": "Two single cones in the driving lane on E2; the car must pass each in the curb lane.",
+  "start": "Home",
+  "destination": "Hospital",
+  "expect": "Arrived",
+  "min_lane_changes": 2,
+  "props": [
+    { "type": "Cone", "street": "E2", "between": ["S3", "S4"], "direction": "eastbound", "lane": "inner", "at": 0.5 },
+    { "type": "Cone", "street": "E2", "between": ["S5", "S6"], "direction": "eastbound", "lane": "inner", "at": 0.4 }
+  ]
+}

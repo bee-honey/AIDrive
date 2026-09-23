@@ -1,0 +1,12 @@
+{
+  "name": "construction_zone",
+  "description": "Inner lane of E2 closed for ~30 m by a barrier and a row of cones; curb lane stays open.",
+  "start": "Home",
+  "destination": "Hospital",
+  "expect": "Arrived",
+  "min_lane_changes": 1,
+  "props": [
+    { "type": "Barrier", "street": "E2", "between": ["S4", "S5"], "direction": "eastbound", "lane": "inner", "at": 0.1 },
+    { "type": "Cone", "street": "E2", "between": ["S4", "S5"], "direction": "eastbound", "lane": "inner", "at": 0.25, "count": 6, "spacing": 4 }
+  ]
+}
