@@ -68,8 +68,10 @@ Status: **Accepted** · **Proposed** · **Superseded**
 
 **Decision:** The road graph has a node at every intersection and landmark and an edge for every road segment between them. Routing uses A*, with a rule that stops the route from U-turning at a node.
 
+**Turn penalty:** On a grid, many routes have the same shortest length. Plain A* can pick a zig-zag "staircase" with 7 turns. Each turn therefore adds 20 m to A*'s cost, so among routes of about the same length the one with the fewest turns wins. Home → Hospital went from 7 turns to 2 with no extra distance.
+
 **Consequences:**
-- A route reads as a list of street names ("Main St → 3rd Ave"). That's easy for an LLM to understand and explain.
+- A route reads as a list of street names ("E2 → S6 → E6"). That's easy for an LLM to understand and explain.
 - Blocking a road means switching off one edge, which makes rerouting cheap.
 - The graph is built from the city grid settings, so it has to be regenerated whenever the city layout changes.
 
@@ -159,3 +161,26 @@ Status: **Accepted** · **Proposed** · **Superseded**
 **Status:** Accepted
 
 **Decision:** `.mcp.json` (each developer's own MCP server address), `.claude/settings.local.json`, Unity's `Library/`, `Temp/`, `Logs/` and `UserSettings/` folders, and IDE files are all git-ignored. API keys for the LLM will go in a `.env` file that is also git-ignored.
+
+---
+
+## D13. Name streets by grid position
+
+**Status:** Accepted
+
+**Decision:** North–south roads are named **S1–S7**, numbered west to east. East–west roads are named **E1–E7**, numbered south to north. An intersection is named after the two roads that cross there, e.g. `S3 & E4`.
+
+**Alternatives considered:** Real-sounding names such as "Main St" and "3rd Ave" feel more natural, but you have to look them up to know where they are.
+
+**Consequences:** A location like "on E2 between S3 & S4, heading east" tells you where the car is and which way it's going without a map. That's easier for people debugging, for the LLM reasoning about routes, and for reading logs. The letter tells you which way a road runs; the number tells you where it is.
+
+---
+
+## D14. 3D text that respects depth
+
+**Status:** Accepted
+
+**Decision:** World-space labels use Unity's built-in `TextMesh` with a custom shader, `AIDrive/Text3D`. It's the same as Unity's text shader except that it checks depth.
+
+**Context:** Unity's built-in text shader draws on top of everything, so labels showed through buildings. TextMeshPro would also work, but it needs extra resources imported into the project.
+

@@ -11,7 +11,7 @@
 | # | Milestone | Status |
 |---|-----------|--------|
 | 0 | City + roads | ✅ Done |
-| 1 | Map semantics (street names, landmarks, road graph, A*) | ⬜ Not started |
+| 1 | Map semantics (street names, landmarks, road graph, A*) | ✅ Done |
 | 2 | Car + autopilot | ⬜ Not started |
 | 3 | Raycast sensors | ⬜ Not started |
 | 4 | Props & scenarios | ⬜ Not started |
@@ -61,15 +61,20 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done
 - [x] Procedural buildings (taller downtown), 2 parks with trees
 - [x] URP materials in `Assets/City/Materials/`
 
-### M1 — Map semantics
-- [ ] Street names (e.g. avenues N–S, streets E–W)
-- [ ] Named landmarks: Home, Office, Hospital, School, Gas Station, Mall, Park A, Park B
-- [ ] Landmark signs / labels visible in the scene
-- [ ] Road graph: intersection nodes + landmark nodes, edges with lengths
-- [ ] A* pathfinding with no-U-turn constraint
-- [ ] Editor gizmo visualization of graph and a debug route
+### ✅ M1 — Map semantics
+- [x] City generator saved in repo (`AIDrive → Generate City`), shared `CityLayout` config
+- [x] Grid street names: **S1–S7** run north–south (west → east), **E1–E7** run east–west (south → north); intersections are `S3 & E4`
+- [x] Street-name signs at all 49 intersections + road names painted at the city edges
+- [x] Named landmarks: Home, Office, Hospital, School, Gas Station, Mall, Park A, Park B (curb sign, drop-off zone, floating label)
+- [x] Road graph: 49 intersection + 8 landmark nodes, 92 edges (street, length, blocked flag)
+- [x] A* with no-U-turn constraint, turn penalty, avoid-streets, blocked edges
+- [x] Turn-by-turn directions ("At S6 & E2, turn left onto S6 heading north for 208 m")
+- [x] Scene-view gizmos for the graph + `RouteDebugger` inspector (From/To/Avoid → Plan Route)
+- [x] 13 EditMode tests (`Assets/Tests/EditMode/RoutePlannerTests.cs`)
 
-**Acceptance:** a route between any two landmarks can be computed and drawn in the Scene view.
+**Acceptance:** a route between any two landmarks can be computed and drawn in the Scene view. ✅
+
+**Notes for M2:** several landmarks are reached with the destination "on your left" — the pull-over logic should either cross to the far curb or the planner should prefer approaching with the destination on the right.
 
 ### M2 — Car + autopilot
 - [ ] Procedural car (body, cabin, 4 wheels that steer/spin)
