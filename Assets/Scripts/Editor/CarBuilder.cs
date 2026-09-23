@@ -100,6 +100,7 @@ namespace AIDrive.Editor
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
+            root.AddComponent<RaycastSensors>();
             root.AddComponent<Autopilot>();
             root.AddComponent<DriveHud>();
 

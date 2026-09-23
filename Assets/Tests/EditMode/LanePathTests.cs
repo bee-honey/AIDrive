@@ -81,6 +81,28 @@ namespace AIDrive.Tests
         }
 
         [Test]
+        public void Project_SeparatesInLaneHitsFromRoadside()
+        {
+            var path = PathFromHome("Hospital", out _);
+            var p = path.PointAtDistance(100f);
+            var t = (path.PointAtDistance(101f) - path.PointAtDistance(99f)).normalized;
+            var right = LanePath.RightOf(t);
+
+            // A cone slightly right of lane centre
+            Assert.IsTrue(path.Project(p + right * 0.4f + Vector3.up * 0.5f, 60, 80, out float s, out float lat));
+            Assert.AreEqual(100f, s, 0.6f);
+            Assert.AreEqual(0.4f, lat, 0.05f);
+
+            // A building face across the sidewalk: far outside the 1.45 m corridor
+            Assert.IsTrue(path.Project(p + right * 6.5f, 60, 80, out _, out float building));
+            Assert.Greater(Mathf.Abs(building), 4f);
+
+            // A point in the oncoming lanes is to the left
+            Assert.IsTrue(path.Project(p - right * 3.6f, 60, 80, out _, out float oncoming));
+            Assert.Less(oncoming, -3f);
+        }
+
+        [Test]
         public void CurbPose_FacesSoLandmarkIsOnTheRight()
         {
             foreach (var lm in graph.Landmarks)

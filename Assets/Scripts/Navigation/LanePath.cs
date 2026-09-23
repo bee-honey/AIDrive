@@ -151,6 +151,23 @@ namespace AIDrive.Navigation
             return best;
         }
 
+        /// <summary>
+        /// Projects a world point onto the path near <paramref name="from"/>: <paramref name="s"/> is the distance
+        /// along the path, <paramref name="lateral"/> the signed offset (+ = right of travel). False if the point
+        /// lies beyond either end of the path.
+        /// </summary>
+        public bool Project(Vector3 p, int from, int window, out float s, out float lateral)
+        {
+            p = Flat(p);
+            int start = Mathf.Max(0, from - 5);
+            int i = ClosestIndex(p, start, window + 5);
+            var tangent = (Points[Mathf.Min(Points.Count - 1, i + 1)] - Points[Mathf.Max(0, i - 1)]).normalized;
+            float along = Vector3.Dot(p - Points[i], tangent);
+            s = Distances[i] + along;
+            lateral = Vector3.Dot(p - Points[i], RightOf(tangent));
+            return s >= 0f && s <= Length + 1f;
+        }
+
         public Vector3 PointAtDistance(float s)
         {
             if (s <= 0f) return Points[0];

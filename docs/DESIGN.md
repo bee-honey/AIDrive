@@ -205,3 +205,19 @@ Status: **Accepted** · **Proposed** · **Superseded**
 - Pulling out from the curb merges into the lane within 12 m.
 - The car counts as arrived within 1.5 m of the stop point.
 
+---
+
+## D16. Sensors are checked against the route, not the car's heading
+
+**Status:** Accepted
+
+**Context:** Raw rays hit buildings at every corner and hit poles during turns. Braking whenever a ray hit something would stop the car at every intersection.
+
+**Decision:** Each hit point is projected onto the planned path, giving a distance along the path and a sideways offset from it. A hit only counts if it's ahead and within **1.45 m** of a lane centre: half the car's width plus a margin. The same check with the centre moved 2.6 m to the right tells us about the neighbouring same-direction lane.
+
+**Lane probes:** Two extra rays run parallel to the car, one lane to each side, with a 45 m range. When a probe sees nothing, the lane counts as clear only **up to the probe's range**, never "clear forever". Treating "nothing seen" as "clear forever" was a real bug during M3: the car moved over into a lane that was also blocked, because the wall was 0.03 m beyond the probe's original 30 m range.
+
+**Blocked:** Stopped behind an obstacle for 2 s, with no free lane → `Blocked`. The car **waits**. It doesn't turn around or pick a new route by itself here: that decision belongs to the planner (M6) and later the agent, as D1 intends. It continues if the obstacle goes away.
+
+**The ray list is defined in code**, not saved in the prefab. That way, tuning the default rays always reaches the car in the scene.
+

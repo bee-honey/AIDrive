@@ -13,7 +13,7 @@
 | 0 | City + roads | ✅ Done |
 | 1 | Map semantics (street names, landmarks, road graph, A*) | ✅ Done |
 | 2 | Car + autopilot | ✅ Done |
-| 3 | Raycast sensors | ⬜ Not started |
+| 3 | Raycast sensors | ✅ Done |
 | 4 | Props & scenarios | ⬜ Not started |
 | 5 | Traffic lights | ⬜ Not started |
 | 6 | Replanning | ⬜ Not started |
@@ -94,14 +94,24 @@ Status legend: ⬜ Not started · 🟨 In progress · ✅ Done
 | Home → Park B | E2 → S5 → E3 → S6 (286 m) | 36.7 s | 0.80 m | 0 |
 | School → Gas Station | S2 → E1 → S6 (494 m) | 54.6 s | 0.63 m | 0 |
 
-### M3 — Raycast sensors
-- [ ] Front fan (7 rays), side (2), rear (1); debug-drawn
-- [ ] Emergency braking based on front clearance
-- [ ] Lane-change avoidance for partial obstructions (same-direction lane)
-- [ ] "Blocked" detection when both lanes obstructed
-- [ ] Sensor + vehicle state exposed as JSON
+### ✅ M3 — Raycast sensors
+- [x] `RaycastSensors`: 7 front rays (0°, ±15°, ±35°, ±60°), 2 side, 1 rear, plus 2 parallel lane probes (45 m); drawn in the Game view
+- [x] Path filter: hits are projected onto the route and only count inside the 1.45 m-wide corridor, so buildings are ignored
+- [x] Stops 3 m short of obstacles, braking by the deceleration actually needed
+- [x] Lane-change avoidance into the other same-direction lane (straight stretches only; never crosses the yellow line)
+- [x] `Waiting` → `Blocked` after 2 s; `blocked` event with street, cross streets, distance and obstacle; resumes when cleared
+- [x] `VehicleState` JSON (the future `get_vehicle_state()` contract) + HUD toggle
+- [x] Test obstacles: "Drop cone ahead" / "Drop blocker ahead" / Clear
+- [x] 1 new EditMode test + 3 PlayMode obstacle tests (6 PlayMode total)
 
-**Acceptance:** car brakes for any object placed ahead; state JSON is readable.
+**Acceptance:** car brakes for any object placed ahead; state JSON is readable. ✅
+
+| Scenario | Result |
+|---|---|
+| Cone in lane on E2 | 1 lane change, passes, arrives, 0 collisions |
+| Blocker across both lanes | No lane change attempt, stops 2.6 m short, `Blocked` on E2 between S3 & S4 |
+| Blocker removed while blocked | Resumes and arrives, 0 collisions |
+| Plain drives (×3) | 0 lane changes (no false obstacles), 0 collisions |
 
 ### M4 — Props & scenarios
 - [ ] Traffic cones, barriers, "Road Closed" signs, parked cars, street lamps

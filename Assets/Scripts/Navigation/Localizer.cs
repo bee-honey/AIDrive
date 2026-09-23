@@ -18,6 +18,8 @@ namespace AIDrive.Navigation
         public string AtIntersection;
         /// <summary>Landmark name when the vehicle is next to one, otherwise null.</summary>
         public string NearLandmark;
+        /// <summary>The two cross streets bounding the current block, e.g. "S3 & S4".</summary>
+        public string Between;
         public string Description;
 
         public override string ToString() => Description;
@@ -79,9 +81,10 @@ namespace AIDrive.Navigation
                 if (n.Kind == NodeKind.Landmark && d < LandmarkRadius) loc.NearLandmark = n.Name;
             }
 
+            loc.Between = CrossStreets(best.Street, pos);
             loc.Description = loc.AtIntersection != null
                 ? $"at {loc.AtIntersection}, heading {loc.Heading}"
-                : $"on {loc.Street} between {CrossStreets(best.Street, pos)}, heading {loc.Heading}";
+                : $"on {loc.Street} between {loc.Between}, heading {loc.Heading}";
             if (loc.NearLandmark != null) loc.Description += $" (at {loc.NearLandmark})";
             return loc;
         }
